@@ -1,286 +1,129 @@
-API em FastAPI que retorna dados de times da NBA e uma análise gerada por IA sobre o confronto entre dois times.
+# NBA Analises IA — Backend
 
-# Instalação
-## 1. Instalar Ollama
+API desenvolvida em FastAPI para coleta, tratamento e disponibilização de dados da NBA, com suporte a análise gerada por IA para comparação entre equipes.
 
-No PowerShell:
+## Visão do projeto
 
-```bash 
-irm https://ollama.com/install.ps1 | iex
+Este backend é responsável por concentrar a lógica de dados do sistema. Ele consulta estatísticas oficiais da NBA, organiza as informações por time e jogador, monta o histórico de confrontos diretos e fornece uma análise textual baseada em IA.
+
+## Objetivo
+
+O objetivo do backend é oferecer uma base confiável de dados para o frontend, permitindo:
+
+- visualizar jogos futuros
+- comparar dois times com estatísticas detalhadas
+- identificar jogadores em destaque
+- consultar confrontos anteriores
+- gerar análise automática com IA
+
+## Tecnologias utilizadas
+
+- Python
+- FastAPI
+- nba_api
+- pandas
+- requests
+- Ollama
+
+## Estrutura funcional
+
+### 1. Coleta de dados
+Os dados são obtidos por meio da biblioteca `nba_api`, que permite consultar times, jogadores, jogos e estatísticas atualizadas.
+
+### 2. Processamento
+As informações coletadas são tratadas para calcular médias por jogo, selecionar destaques por categoria e organizar o histórico de confrontos.
+
+### 3. Análise com IA
+A API integra Ollama para gerar um resumo simples e interpretável sobre o confronto entre duas equipes.
+
+## Principais endpoints
+
+### `GET /games/upcoming`
+Retorna os próximos jogos disponíveis, com data, horário e informações dos times.
+
+### `GET /match/{team1_id}/{team2_id}`
+Retorna a comparação completa entre duas equipes, incluindo:
+
+- dados básicos dos times
+- estatísticas de temporada
+- melhores jogadores por categoria
+- histórico de confrontos diretos
+- lista de pontuadores em destaque
+
+### `GET /analysis/{team1_id}/{team2_id}`
+Retorna uma análise em linguagem natural com apoio de IA, destacando qual equipe está melhor no geral e quais são as principais vantagens de cada lado.
+
+## Dados retornados
+
+### Time
+Cada time contém:
+
+- id
+- nome
+- sigla
+- logo
+
+### Estatísticas de temporada
+
+- pontos por jogo
+- pontos sofridos
+- rebotes
+- assistências
+- turnovers
+- aproveitamento de arremesso de quadra
+
+### Jogadores em destaque
+O backend identifica líderes da equipe em:
+
+- pontos
+- rebotes
+- assistências
+- roubos
+- bloqueios
+- turnovers
+- FG%
+- 3P%
+
+### Pontuadores em destaque
+O endpoint de confronto também retorna até 15 jogadores ordenados por pontos por jogo, com foto quando disponível.
+
+## Fotos dos jogadores
+
+As fotos são montadas automaticamente a partir do ID do jogador usando a CDN oficial da NBA.
+
+Formato utilizado:
+
+```bash
+https://cdn.nba.com/headshots/nba/latest/1040x760/{player_id}.png
 ```
-## 2. Baixar modelo
-```bash 
+
+## Como executar
+
+### 1. Instalar dependências
+
+```bash
+pip install fastapi uvicorn nba_api pandas requests
+```
+
+### 2. Instalar e iniciar o Ollama
+
+```bash
+irm https://ollama.com/install.ps1 | iex
 ollama run llama3:8b
 ```
 
-## 3. Instalar dependências Python
-```bash 
-pip install fastapi uvicorn nba_api pandas requests
-```
-## Rodar o projeto
-```bash 
+### 3. Iniciar a API
+
+```bash
 uvicorn main:app --reload
 ```
 
-# Endpoints
-## Jogos futuros
-GET /games/upcoming
+## Exemplo de uso
 
-Retorna os próximos jogos com times, data, horário e logos.
+O backend pode ser consumido pelo frontend por meio das rotas de jogos futuros, confronto e análise com IA.
 
-## Dados do confronto
-GET /match/{team1_id}/{team2_id}
+## Observações
 
-Retorna:
-
-- informações dos times
-- estatísticas por jogo
-- melhores jogadores
-- histórico de confrontos (últimos 5 jogos)
-## Análise com IA
-GET /analysis/{team1_id}/{team2_id}
-
-Retorna uma análise simples do confronto com:
-
-- quem está melhor no geral
-- vantagens de cada time
-- palpite de vencedor
-
-# Exemplos de resposta
-
-## Exemplo /games/upcoming
-
-Resposta:
-
-```bash
-  {
-    "game_id": "0022400001",
-    "date": "04/03/2026",
-    "time": "20:00 ET",
-    "home_team": {
-      "id": 1610612766,
-      "name": "Charlotte Hornets",
-      "logo": "https://cdn.nba.com/logos/nba/1610612766/global/L/logo.svg"
-    },
-    "away_team": {
-      "id": 1610612754,
-      "name": "Indiana Pacers",
-      "logo": "https://cdn.nba.com/logos/nba/1610612754/global/L/logo.svg"
-    }
-  },
-]
-```
-
-## Exemplo /match/{team1_id}/{team2_id}
-
-Resposta:
-```bash
-{
-    "team1": {
-        "info": {
-            "id": 1610612766,
-            "name": "Charlotte Hornets",
-            "abbreviation": "CHA",
-            "logo": "https://cdn.nba.com/logos/nba/1610612766/global/L/logo.svg"
-        },
-        "stats": {
-            "points": 116.2,
-            "points_allowed": 111.4,
-            "rebounds": 46.2,
-            "assists": 26.4,
-            "turnovers": 15.5,
-            "fg_pct": 46.1
-        },
-        "players": {
-            "points": {
-                "name": "Brandon Miller",
-                "value": 20.4
-            },
-            "rebounds": {
-                "name": "Moussa Diabaté",
-                "value": 8.8
-            },
-            "assists": {
-                "name": "LaMelo Ball",
-                "value": 7.1
-            },
-            "steals": {
-                "name": "LaMelo Ball",
-                "value": 1.2
-            },
-            "blocks": {
-                "name": "Ryan Kalkbrenner",
-                "value": 1.5
-            },
-            "turnovers": {
-                "name": "LaMelo Ball",
-                "value": 2.7
-            },
-            "fg_pct": {
-                "name": "Kon Knueppel",
-                "percentage": 48.2,
-                "made": 6.4
-            },
-            "fg3_pct": {
-                "name": "Kon Knueppel",
-                "percentage": 43.1,
-                "made": 3.4
-            }
-        }
-    },
-    "team2": {
-        "info": {
-            "id": 1610612754,
-            "name": "Indiana Pacers",
-            "abbreviation": "IND",
-            "logo": "https://cdn.nba.com/logos/nba/1610612754/global/L/logo.svg"
-        },
-        "stats": {
-            "points": 112.6,
-            "points_allowed": 120.7,
-            "rebounds": 41.7,
-            "assists": 27.5,
-            "turnovers": 14.4,
-            "fg_pct": 45.9
-        },
-        "players": {
-            "points": {
-                "name": "Pascal Siakam",
-                "value": 23.9
-            },
-            "rebounds": {
-                "name": "Ivica Zubac",
-                "value": 10.6
-            },
-            "assists": {
-                "name": "Andrew Nembhard",
-                "value": 7.7
-            },
-            "steals": {
-                "name": "Jalen Slawson",
-                "value": 1.4
-            },
-            "blocks": {
-                "name": "Jay Huff",
-                "value": 1.8
-            },
-            "turnovers": {
-                "name": "Andrew Nembhard",
-                "value": 2.4
-            },
-            "fg_pct": {
-                "name": "Pascal Siakam",
-                "percentage": 48.3,
-                "made": 9.0
-            },
-            "fg3_pct": {
-                "name": "Aaron Nesmith",
-                "percentage": 37.9,
-                "made": 2.3
-            }
-        }
-    },
-    "head_to_head": [
-        {
-            "date": "2026-04-03",
-            "home_team": {
-                "id": 1610612766,
-                "name": "Charlotte Hornets",
-                "abbreviation": "CHA",
-                "logo": "https://cdn.nba.com/logos/nba/1610612766/global/L/logo.svg"
-            },
-            "away_team": {
-                "id": 1610612754,
-                "name": "Indiana Pacers",
-                "abbreviation": "IND",
-                "logo": "https://cdn.nba.com/logos/nba/1610612754/global/L/logo.svg"
-            },
-            "score": {
-                "home": 25,
-                "away": 11
-            },
-            "winner": "Indiana Pacers"
-        },
-        {
-            "date": "2026-02-26",
-            "home_team": {
-                "id": 1610612754,
-                "name": "Indiana Pacers",
-                "abbreviation": "IND",
-                "logo": "https://cdn.nba.com/logos/nba/1610612754/global/L/logo.svg"
-            },
-            "away_team": {
-                "id": 1610612766,
-                "name": "Charlotte Hornets",
-                "abbreviation": "CHA",
-                "logo": "https://cdn.nba.com/logos/nba/1610612766/global/L/logo.svg"
-            },
-            "score": {
-                "home": 109,
-                "away": 133
-            },
-            "winner": "Charlotte Hornets"
-        },
-        {
-            "date": "2026-01-08",
-            "home_team": {
-                "id": 1610612766,
-                "name": "Charlotte Hornets",
-                "abbreviation": "CHA",
-                "logo": "https://cdn.nba.com/logos/nba/1610612766/global/L/logo.svg"
-            },
-            "away_team": {
-                "id": 1610612754,
-                "name": "Indiana Pacers",
-                "abbreviation": "IND",
-                "logo": "https://cdn.nba.com/logos/nba/1610612754/global/L/logo.svg"
-            },
-            "score": {
-                "home": 112,
-                "away": 114
-            },
-            "winner": "Indiana Pacers"
-        },
-        {
-            "date": "2025-11-19",
-            "home_team": {
-                "id": 1610612754,
-                "name": "Indiana Pacers",
-                "abbreviation": "IND",
-                "logo": "https://cdn.nba.com/logos/nba/1610612754/global/L/logo.svg"
-            },
-            "away_team": {
-                "id": 1610612766,
-                "name": "Charlotte Hornets",
-                "abbreviation": "CHA",
-                "logo": "https://cdn.nba.com/logos/nba/1610612766/global/L/logo.svg"
-            },
-            "score": {
-                "home": 127,
-                "away": 118
-            },
-            "winner": "Indiana Pacers"
-        },
-        {
-            "date": "2025-04-02",
-            "home_team": {
-                "id": 1610612754,
-                "name": "Indiana Pacers",
-                "abbreviation": "IND",
-                "logo": "https://cdn.nba.com/logos/nba/1610612754/global/L/logo.svg"
-            },
-            "away_team": {
-                "id": 1610612766,
-                "name": "Charlotte Hornets",
-                "abbreviation": "CHA",
-                "logo": "https://cdn.nba.com/logos/nba/1610612766/global/L/logo.svg"
-            },
-            "score": {
-                "home": 119,
-                "away": 105
-            },
-            "winner": "Indiana Pacers"
-        }
-    ]
-}
-```
+- O sistema foi pensado para ser modular e simples de evoluir.
+- As estatísticas podem ser expandidas futuramente com novos indicadores.
+- Em caso de indisponibilidade da IA, o restante da API continua operando normalmente.
