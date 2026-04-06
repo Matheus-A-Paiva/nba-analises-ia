@@ -214,6 +214,34 @@ def get_top_scorers(team1_id, team2_id, limit=15):
     return result
 
 
+def get_top_scorers_global(limit=15):
+    df = leaguedashplayerstats.LeagueDashPlayerStats().get_data_frames()[0]
+
+    if df.empty:
+        return []
+
+    filtered = df[df["GP"] > 0].copy()
+    filtered["PTS_PG"] = filtered["PTS"] / filtered["GP"]
+
+    team_lookup = {t["id"]: t for t in teams.get_teams()}
+    top = filtered.sort_values("PTS_PG", ascending=False).head(limit)
+
+    result = []
+    for _, row in top.iterrows():
+        team = team_lookup.get(int(row["TEAM_ID"]), {})
+        result.append({
+            "player_id": int(row["PLAYER_ID"]),
+            "name": row["PLAYER_NAME"],
+            "team_id": int(row["TEAM_ID"]),
+            "team": team.get("full_name", ""),
+            "team_abbreviation": team.get("abbreviation", ""),
+            "points": round(float(row["PTS_PG"]), 1),
+            "photo": get_player_photo(row["PLAYER_ID"])
+        })
+
+    return result
+
+
 # UPCOMING GAMES
 @app.get("/games/upcoming")
 def get_upcoming_games():
@@ -250,6 +278,12 @@ def get_match(team1_id: int, team2_id: int):
         "head_to_head": get_h2h(team1_id, team2_id),
         "top_scorers": get_top_scorers(team1_id, team2_id)
     }
+
+
+@app.get("/players/top-scorers")
+def get_players_top_scorers(limit: int = 15):
+    safe_limit = max(1, min(limit, 50))
+    return {"top_scorers": get_top_scorers_global(safe_limit)}
 
 
 # IA (SEPARADO)
