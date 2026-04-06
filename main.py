@@ -214,6 +214,63 @@ def get_top_scorers(team1_id, team2_id, limit=15):
     return result
 
 
+def get_top_players_by_metric(team1_id, team2_id, limit=10):
+    df = leaguedashplayerstats.LeagueDashPlayerStats().get_data_frames()[0]
+    filtered = df[df["TEAM_ID"].isin([team1_id, team2_id])].copy()
+
+    if filtered.empty:
+        return {
+            "points": [],
+            "rebounds": [],
+            "assists": [],
+            "steals": [],
+            "blocks": [],
+            "turnovers": []
+        }
+
+    filtered = filtered[filtered["GP"] > 0].copy()
+    filtered["PTS_PG"] = filtered["PTS"] / filtered["GP"]
+    filtered["REB_PG"] = filtered["REB"] / filtered["GP"]
+    filtered["AST_PG"] = filtered["AST"] / filtered["GP"]
+    filtered["STL_PG"] = filtered["STL"] / filtered["GP"]
+    filtered["BLK_PG"] = filtered["BLK"] / filtered["GP"]
+    filtered["TOV_PG"] = filtered["TOV"] / filtered["GP"]
+
+    team_map = {
+        team1_id: get_team_info(team1_id),
+        team2_id: get_team_info(team2_id)
+    }
+
+    metric_map = {
+        "points": "PTS_PG",
+        "rebounds": "REB_PG",
+        "assists": "AST_PG",
+        "steals": "STL_PG",
+        "blocks": "BLK_PG",
+        "turnovers": "TOV_PG"
+    }
+
+    result = {}
+
+    for metric_name, column in metric_map.items():
+        top = filtered.sort_values(column, ascending=False).head(limit)
+        result[metric_name] = []
+
+        for _, row in top.iterrows():
+            team = team_map.get(int(row["TEAM_ID"]))
+            result[metric_name].append({
+                "player_id": int(row["PLAYER_ID"]),
+                "name": row["PLAYER_NAME"],
+                "team_id": int(row["TEAM_ID"]),
+                "team": team["name"] if team else "",
+                "team_abbreviation": team["abbreviation"] if team else "",
+                "value": round(float(row[column]), 1),
+                "photo": get_player_photo(row["PLAYER_ID"])
+            })
+
+    return result
+
+
 def get_top_scorers_global(limit=15):
     df = leaguedashplayerstats.LeagueDashPlayerStats().get_data_frames()[0]
 
@@ -276,7 +333,8 @@ def get_match(team1_id: int, team2_id: int):
         "team1": get_team_full(team1_id),
         "team2": get_team_full(team2_id),
         "head_to_head": get_h2h(team1_id, team2_id),
-        "top_scorers": get_top_scorers(team1_id, team2_id)
+        "top_scorers": get_top_scorers(team1_id, team2_id),
+        "top_players": get_top_players_by_metric(team1_id, team2_id)
     }
 
 
