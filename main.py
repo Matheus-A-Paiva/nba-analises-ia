@@ -28,6 +28,10 @@ def get_team_info(team_id):
             }
 
 
+def get_player_photo(player_id):
+    return f"https://cdn.nba.com/headshots/nba/latest/1040x760/{int(player_id)}.png"
+
+
 # TEAM STATS (PER GAME)
 def get_team_stats(team_id):
     df = leaguedashteamstats.LeagueDashTeamStats().get_data_frames()[0]
@@ -177,6 +181,39 @@ def get_team_full(team_id):
     }
 
 
+def get_top_scorers(team1_id, team2_id, limit=15):
+    df = leaguedashplayerstats.LeagueDashPlayerStats().get_data_frames()[0]
+    filtered = df[df["TEAM_ID"].isin([team1_id, team2_id])].copy()
+
+    if filtered.empty:
+        return []
+
+    filtered = filtered[filtered["GP"] > 0].copy()
+    filtered["PTS_PG"] = filtered["PTS"] / filtered["GP"]
+
+    team_map = {
+        team1_id: get_team_info(team1_id),
+        team2_id: get_team_info(team2_id)
+    }
+
+    top = filtered.sort_values("PTS_PG", ascending=False).head(limit)
+
+    result = []
+    for _, row in top.iterrows():
+        team = team_map.get(int(row["TEAM_ID"]))
+        result.append({
+            "player_id": int(row["PLAYER_ID"]),
+            "name": row["PLAYER_NAME"],
+            "team_id": int(row["TEAM_ID"]),
+            "team": team["name"] if team else "",
+            "team_abbreviation": team["abbreviation"] if team else "",
+            "points": round(float(row["PTS_PG"]), 1),
+            "photo": get_player_photo(row["PLAYER_ID"])
+        })
+
+    return result
+
+
 # UPCOMING GAMES
 @app.get("/games/upcoming")
 def get_upcoming_games():
@@ -210,7 +247,8 @@ def get_match(team1_id: int, team2_id: int):
     return {
         "team1": get_team_full(team1_id),
         "team2": get_team_full(team2_id),
-        "head_to_head": get_h2h(team1_id, team2_id)
+        "head_to_head": get_h2h(team1_id, team2_id),
+        "top_scorers": get_top_scorers(team1_id, team2_id)
     }
 
 
