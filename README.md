@@ -168,6 +168,7 @@ O projeto já está preparado para deploy em uma plataforma como Render com:
 - banco PostgreSQL configurável por `DATABASE_URL`
 - healthcheck público em `GET /health`
 - arquivo `render.yaml` com `startCommand` e `healthCheckPath`
+- normalização automática da connection string do Render para uso com `asyncpg`
 
 Variáveis mínimas para produção:
 
