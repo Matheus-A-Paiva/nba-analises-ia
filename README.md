@@ -165,10 +165,16 @@ Exemplos de consumo pelo frontend:
 O projeto já está preparado para deploy em uma plataforma como Render com:
 
 - entrypoint em `app.main`
-- banco PostgreSQL configurável por `DATABASE_URL`
+- banco PostgreSQL externo configurável por `DATABASE_URL`
 - healthcheck público em `GET /health`
 - arquivo `render.yaml` com `startCommand` e `healthCheckPath`
 - normalização automática da connection string do Render para uso com `asyncpg`
+
+Fluxo recomendado para deploy com menor custo:
+
+- subir apenas o web service no Render
+- usar um banco PostgreSQL externo com plano gratuito, como Neon ou Supabase
+- preencher `DATABASE_URL` manualmente no painel do Render
 
 Variáveis mínimas para produção:
 
@@ -178,6 +184,14 @@ Variáveis mínimas para produção:
 - `CORS_ORIGINS`
 
 Antes de subir, ajuste `CORS_ORIGINS` para os domínios reais do frontend.
+
+Exemplo de `DATABASE_URL` com Postgres externo:
+
+```env
+postgresql://user:password@host:5432/database?sslmode=require
+```
+
+O backend converte automaticamente esse formato para `postgresql+asyncpg://...` quando necessário.
 
 Fluxo recomendado para a tela de confronto no frontend:
 
