@@ -601,16 +601,26 @@ def get_games_by_date(
 
                 seen.add(game_id)
 
-                home_team_id = int(game["homeTeam"]["teamId"])
-                away_team_id = int(game["awayTeam"]["teamId"])
+                home_team = game["homeTeam"]
+                away_team = game["awayTeam"]
 
                 games.append(
                     {
                         "game_id": game_id,
                         "date": target_date.isoformat(),
                         "time": game["gameStatusText"],
-                        "home_team": get_team_info(home_team_id),
-                        "away_team": get_team_info(away_team_id),
+                        "home_team": {
+                            "id": int(home_team["teamId"]),
+                            "name": f'{home_team["teamCity"]} {home_team["teamName"]}',
+                            "abbreviation": home_team["teamTricode"],
+                            "logo": f'https://cdn.nba.com/logos/nba/{home_team["teamId"]}/global/L/logo.svg',
+                        },
+                        "away_team": {
+                            "id": int(away_team["teamId"]),
+                            "name": f'{away_team["teamCity"]} {away_team["teamName"]}',
+                            "abbreviation": away_team["teamTricode"],
+                            "logo": f'https://cdn.nba.com/logos/nba/{away_team["teamId"]}/global/L/logo.svg',
+                        },
                     }
                 )
 
