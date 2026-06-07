@@ -581,58 +581,44 @@ def get_games_by_date(
     game_date: date, with_cache_status: bool = False
 ) -> list | tuple[list, str]:
     def fetch_games():
+        scoreboard = scoreboardv3.ScoreboardV3(game_date=game_date.strftime("%m/%d/%Y"))
+        raw_games = scoreboard.get_dict().get("scoreboard", {}).get("games", [])
+
         games = []
-        seen = set()
 
-        for offset in range(15):
-            target_date = game_date + timedelta(days=offset)
+        for game in raw_games:
+            home_team = game["homeTeam"]
+            away_team = game["awayTeam"]
 
-            scoreboard = scoreboardv3.ScoreboardV3(
-                game_date=target_date.strftime("%m/%d/%Y")
+            games.append(
+                {
+                    "game_id": game["gameId"],
+                    "date": game_date.isoformat(),
+                    "time": game["gameStatusText"],
+                    "home_team": {
+                        "id": int(home_team["teamId"]),
+                        "name": f'{home_team["teamCity"]} {home_team["teamName"]}',
+                        "abbreviation": home_team["teamTricode"],
+                        "logo": f'https://cdn.nba.com/logos/nba/{home_team["teamId"]}/global/L/logo.svg',
+                    },
+                    "away_team": {
+                        "id": int(away_team["teamId"]),
+                        "name": f'{away_team["teamCity"]} {away_team["teamName"]}',
+                        "abbreviation": away_team["teamTricode"],
+                        "logo": f'https://cdn.nba.com/logos/nba/{away_team["teamId"]}/global/L/logo.svg',
+                    },
+                }
             )
-
-            raw_games = scoreboard.get_dict()["scoreboard"]["games"]
-
-            for game in raw_games:
-                game_id = game["gameId"]
-
-                if game_id in seen:
-                    continue
-
-                seen.add(game_id)
-
-                home_team = game["homeTeam"]
-                away_team = game["awayTeam"]
-
-                games.append(
-                    {
-                        "game_id": game_id,
-                        "date": target_date.isoformat(),
-                        "time": game["gameStatusText"],
-                        "home_team": {
-                            "id": int(home_team["teamId"]),
-                            "name": f'{home_team["teamCity"]} {home_team["teamName"]}',
-                            "abbreviation": home_team["teamTricode"],
-                            "logo": f'https://cdn.nba.com/logos/nba/{home_team["teamId"]}/global/L/logo.svg',
-                        },
-                        "away_team": {
-                            "id": int(away_team["teamId"]),
-                            "name": f'{away_team["teamCity"]} {away_team["teamName"]}',
-                            "abbreviation": away_team["teamTricode"],
-                            "logo": f'https://cdn.nba.com/logos/nba/{away_team["teamId"]}/global/L/logo.svg',
-                        },
-                    }
-                )
 
         games.sort(key=lambda x: (x["date"], x["time"]))
 
         return games
 
     games, cache_status = cache_service.get_cached_resource(
-        cache_key=f"games-15d:{game_date.isoformat()}",
+        cache_key=f"games-by-date:{game_date.isoformat()}",
         ttl=GAMES_BY_DATE_CACHE_TTL,
         fetcher=fetch_games,
-        label=f"games 15 days from {game_date.isoformat()}",
+        label=f"games for {game_date.isoformat()}",
         error_detail="NBA games service timed out. Try again in a moment.",
     )
 
