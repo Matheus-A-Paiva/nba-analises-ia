@@ -4,6 +4,7 @@ from datetime import date, timedelta
 import pandas as pd
 from curl_cffi import requests as curl_requests
 from nba_api.stats.static import teams
+from nba_api.stats.endpoints import scoreboardv3
 from nba_api.stats.library.http import STATS_HEADERS
 
 from app.services import cache_service
@@ -576,41 +577,52 @@ def get_top_scorers_global(
 
     return result
 
-
 def get_games_by_date(
     game_date: date, with_cache_status: bool = False
 ) -> list | tuple[list, str]:
     def fetch_games():
-        formatted_date = game_date.strftime("%m/%d/%Y")
-        df = _get_result_set_dataframe(
-            endpoint="scoreboardv2",
-            params={
-                "DayOffset": "0",
-                "GameDate": formatted_date,
-                "LeagueID": "00",
-            },
-            timeout=NBA_SCOREBOARD_TIMEOUT,
-        )
-
         games = []
-        for _, row in df.iterrows():
-            games.append(
-                {
-                    "game_id": str(row["GAME_ID"]),
-                    "date": game_date.isoformat(),
-                    "time": row["GAME_STATUS_TEXT"],
-                    "home_team": get_team_info(row["HOME_TEAM_ID"]),
-                    "away_team": get_team_info(row["VISITOR_TEAM_ID"]),
-                }
+        seen = set()
+
+        for offset in range(15):
+            target_date = game_date + timedelta(days=offset)
+
+            scoreboard = scoreboardv3.ScoreboardV3(
+                game_date=target_date.strftime("%m/%d/%Y")
             )
+
+            raw_games = scoreboard.get_dict()["scoreboard"]["games"]
+
+            for game in raw_games:
+                game_id = game["gameId"]
+
+                if game_id in seen:
+                    continue
+
+                seen.add(game_id)
+
+                home_team_id = int(game["homeTeam"]["teamId"])
+                away_team_id = int(game["awayTeam"]["teamId"])
+
+                games.append(
+                    {
+                        "game_id": game_id,
+                        "date": target_date.isoformat(),
+                        "time": game["gameStatusText"],
+                        "home_team": get_team_info(home_team_id),
+                        "away_team": get_team_info(away_team_id),
+                    }
+                )
+
+        games.sort(key=lambda x: (x["date"], x["time"]))
 
         return games
 
     games, cache_status = cache_service.get_cached_resource(
-        cache_key=f"games:{game_date.isoformat()}",
+        cache_key=f"games-15d:{game_date.isoformat()}",
         ttl=GAMES_BY_DATE_CACHE_TTL,
         fetcher=fetch_games,
-        label=f"games for {game_date.isoformat()}",
+        label=f"games 15 days from {game_date.isoformat()}",
         error_detail="NBA games service timed out. Try again in a moment.",
     )
 
