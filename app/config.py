@@ -1,6 +1,20 @@
 from pydantic_settings import BaseSettings
 
 
+def _normalize_database_url(url: str) -> str:
+    normalized = url.strip()
+
+    if normalized.startswith("postgres://"):
+        normalized = normalized.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif normalized.startswith("postgresql://") and "+asyncpg" not in normalized:
+        normalized = normalized.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    if "sslmode=require" in normalized:
+        normalized = normalized.replace("sslmode=require", "ssl=require")
+
+    return normalized
+
+
 class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/nba_analises"
     SECRET_KEY: str = "change-me-in-production"
@@ -18,3 +32,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+settings.DATABASE_URL = _normalize_database_url(settings.DATABASE_URL)
